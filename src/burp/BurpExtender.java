@@ -80,7 +80,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, Clipboa
 			boolean cookiesExist = processCookies(prefix, py, headers);
 			py.append('\n').append(prefix).append("headers = {");
 			processHeaders(py, headers);
-			py.append('}');
+			py.append("\n}");
 			BodyType bodyType = processBody(prefix, py, req, ri);
 			py.append(requestsMethodPrefix);
 			py.append(ri.getMethod().toLowerCase());
@@ -108,10 +108,10 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, Clipboa
 			iter.remove();
 			for (String cookie : header.substring(8).split("; ?")) {
 				if (cookiesExist) {
-					py.append(", \"");
+					py.append(",\n    \"");
 				} else {
 					cookiesExist = true;
-					py.append('\n').append(prefix).append("cookies = {\"");
+					py.append('\n').append(prefix).append("cookies = {\n    \"");
 				}
 				String[] parts = cookie.split("=", 2);
 				py.append(escapeQuotes(parts[0]));
@@ -120,7 +120,7 @@ public class BurpExtender implements IBurpExtender, IContextMenuFactory, Clipboa
 				py.append('"');
 			}
 		}
-		if (cookiesExist) py.append('}');
+		if (cookiesExist) py.append("\n}");
 		return cookiesExist;
 	}
 
@@ -144,9 +144,9 @@ header_loop:
 			if (colonPos == -1) continue;
 			if (firstHeader) {
 				firstHeader = false;
-				py.append('"');
+				py.append("\n    \"");
 			} else {
-				py.append(", \"");
+				py.append(",\n    \"");
 			}
 			py.append(header, 0, colonPos);
 			py.append("\": \"");
@@ -173,7 +173,7 @@ header_loop:
 		}
 		py.append("data = ");
 		if (contentType == IRequestInfo.CONTENT_TYPE_URL_ENCODED) {
-			py.append('{');
+			py.append("{\n    ");
 			boolean firstKey = true;
 			int keyStart = bo, keyEnd = -1;
 			for (int pos = bo; pos < req.length; pos++) {
@@ -181,7 +181,7 @@ header_loop:
 				if (keyEnd == -1) {
 					if (b == (byte)'=') {
 						if (pos == req.length - 1) {
-							if (!firstKey) py.append(", ");
+							if (!firstKey) py.append(",\n    ");
 							escapeUrlEncodedBytes(req, py, keyStart, pos);
 							py.append(": ''");
 						} else {
@@ -189,7 +189,7 @@ header_loop:
 						}
 					}
 				} else if (b == (byte)'&' || pos == req.length - 1) {
-					if (firstKey) firstKey = false; else py.append(", ");
+					if (firstKey) firstKey = false; else py.append(",\n    ");
 					escapeUrlEncodedBytes(req, py, keyStart, keyEnd);
 					py.append(": ");
 					escapeUrlEncodedBytes(req, py, keyEnd + 1,
@@ -198,7 +198,7 @@ header_loop:
 					keyStart = pos + 1;
 				}
 			}
-			py.append('}');
+			py.append("\n}");
 		} else {
 			escapeBytes(req, py, bo, req.length);
 		}
@@ -224,29 +224,29 @@ header_loop:
 
 	private static void escapeJson(Json node, StringBuilder output) {
 		if (node.isObject()) {
-			output.append('{');
+			output.append("{\n    ");
 			Map<String, Json> tm = new TreeMap(String.CASE_INSENSITIVE_ORDER);
 			tm.putAll(node.asJsonMap());
 			final Iterator<Map.Entry<String, Json>> iter = tm.entrySet().iterator();
 			if (iter.hasNext()) {
 				appendIteratedEntry(iter, output);
 				while (iter.hasNext()) {
-					output.append(", ");
+					output.append(",\n    ");
 					appendIteratedEntry(iter, output);
 				}
 			}
-			output.append('}');
+			output.append("\n}");
 		} else if (node.isArray()) {
-			output.append('[');
+			output.append("[\n    ");
 			final Iterator<Json> iter = node.asJsonList().iterator();
 			if (iter.hasNext()) {
 				escapeJson(iter.next(), output);
 				while (iter.hasNext()) {
-					output.append(", ");
+					output.append(",\n    ");
 					escapeJson(iter.next(), output);
 				}
 			}
-			output.append(']');
+			output.append("\n]");
 		} else if (node.isString()) {
 			escapeString(node.asString(), output);
 		} else if (node.isBoolean()) {
